@@ -48,7 +48,7 @@ CREATE TABLE catalogs (
 DROP TABLE IF EXISTS media_types;
 CREATE TABLE media_types(
 	id SERIAL PRIMARY KEY,
-    name ENUM ('Фото', 'Видео', 'Аудио', 'Текст') NOT NULL COMMENT 'Тип данных',
+    name ENUM ('Photo', 'Video', 'Audio', 'Text') NOT NULL COMMENT 'Тип данных',
     created_at DATETIME DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -74,7 +74,7 @@ CREATE TABLE city (
   country_id BIGINT UNSIGNED NOT NULL,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
-  KEY idx_fk_country_id (country_id),
+  INDEX idx_city(city),
   CONSTRAINT fk_city_country FOREIGN KEY (country_id) REFERENCES country(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -104,7 +104,7 @@ CREATE TABLE genre (
 	genre VARCHAR(50) NOT NULL,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	
-	INDEX genre_idx(genre)
+	INDEX idx_genre (genre)
 );
 
 --
@@ -116,7 +116,7 @@ CREATE TABLE lang (
   id SERIAL PRIMARY KEY,
   name CHAR(20) NOT NULL,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
- 
+  
 );
 
 --
@@ -129,7 +129,7 @@ CREATE TABLE profession (
 	profession VARCHAR(50) NOT NULL,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	
-	KEY idx_profession(profession)
+	INDEX idx_profession(profession)
 );
 
 --
@@ -147,6 +147,7 @@ CREATE TABLE media(
     created_at DATETIME DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
+    INDEX idx_filename (filename),
     CONSTRAINT fk_media_type FOREIGN KEY (media_type_id) REFERENCES media_types(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -161,7 +162,8 @@ CREATE TABLE photo(
 	created_at DATETIME DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	
-	FOREIGN KEY (media_id) REFERENCES media(id)
+	FOREIGN KEY (media_id) REFERENCES media(id),
+	CONSTRAINT fk_photo_media FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -186,6 +188,37 @@ CREATE TABLE profiles (
 );
 
 --
+-- Схема таблицы фильмов
+--
+
+DROP TABLE IF EXISTS film;
+CREATE TABLE film(
+	id SERIAL PRIMARY KEY,
+	title VARCHAR(100) NOT NULL COMMENT 'Название фильма',
+	description TEXT NOT NULL COMMENT 'Описание',
+	media_id BIGINT UNSIGNED NOT NULL,
+	catalogs_id BIGINT UNSIGNED NOT NULL,
+	production_year YEAR NOT NULL COMMENT 'Год производства',
+    country_id BIGINT UNSIGNED NOT NULL COMMENT 'Страна производства',
+    lang_id BIGINT UNSIGNED NOT NULL COMMENT 'Язык',
+  	original_lang_id BIGINT UNSIGNED NOT NULL COMMENT 'Язык оригинала',
+    premiere_russia DATETIME NOT NULL COMMENT 'Дата премьеры в России',
+    premiere_world DATETIME NOT NULL COMMENT 'Дата премьеры в мире',
+    age_restrict ENUM ('0+','6+', '12+', '16+', '18+') NOT NULL COMMENT 'Возрастные ограничения',
+    duration TIME COMMENT 'Продолжительность фильма',
+    created_at DATETIME NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_title(title),
+    INDEX idx_title_year(title, production_year),
+    CONSTRAINT fk_film_media FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_film_catalogs FOREIGN KEY (catalogs_id) REFERENCES catalogs(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_film_country FOREIGN KEY (country_id) REFERENCES country(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_film_lang FOREIGN KEY (lang_id) REFERENCES lang(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_film_original_lang FOREIGN KEY (original_lang_id) REFERENCES lang(id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+--
 -- Схема таблицы создателей фильма
 --
 
@@ -197,14 +230,14 @@ CREATE TABLE autor (
     profession_id BIGINT UNSIGNED NOT NULL COMMENT 'Карьера',
     birthday DATE NOT NULL,
     city_id BIGINT UNSIGNED NOT NULL COMMENT 'Место рождения',
-    media_id BIGINT UNSIGNED NOT NULL COMMENT 'Фильмография',
+    film_id BIGINT UNSIGNED NOT NULL COMMENT 'Фильмография',
     created_at DATETIME DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     INDEX idx_autor_firstname_lastname(firstname, lastname),
     CONSTRAINT fk_autor_profession FOREIGN KEY (profession_id) REFERENCES profession(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_autor_city FOREIGN KEY (city_id) REFERENCES city(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_autor_media FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT fk_autor_film FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -236,45 +269,13 @@ CREATE TABLE love_genre (
 );
 
 --
--- Схема таблицы фильмов
---
-
-DROP TABLE IF EXISTS film;
-CREATE TABLE film(
-	id SERIAL PRIMARY KEY,
-	name VARCHAR(100) NOT NULL COMMENT 'Название фильма',
-	description TEXT NOT NULL COMMENT 'Описание',
-	media_id BIGINT UNSIGNED NOT NULL,
-	catalogs_id BIGINT UNSIGNED NOT NULL,
-	production_year YEAR NOT NULL COMMENT 'Год производства',
-    country_id BIGINT UNSIGNED NOT NULL COMMENT 'Страна производства',
-    lang_id BIGINT UNSIGNED NOT NULL COMMENT 'Язык',
-  	original_lang_id BIGINT UNSIGNED NOT NULL COMMENT 'Язык оригинала',
-    fees INT UNSIGNED NOT NULL COMMENT 'Кассовые сборы',
-    premiere_russia DATETIME NOT NULL COMMENT 'Дата премьеры в России',
-    premiere_world DATETIME NOT NULL COMMENT 'Дата премьеры в мире',
-    age_restrict ENUM ('0+','6+', '12+', '16+', '18+') NOT NULL COMMENT 'Возрастные ограничения',
-    duration TIME COMMENT 'Продолжительность фильма',
-    created_at DATETIME NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW() ON UPDATE CURRENT_TIMESTAMP,
-    
-    KEY idx_name(name),
-    KEY idx_name_year(name, production_year),
-    CONSTRAINT fk_film_media FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_film_catalogs FOREIGN KEY (catalogs_id) REFERENCES catalogs(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_film_country FOREIGN KEY (country_id) REFERENCES country(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_film_lang FOREIGN KEY (lang_id) REFERENCES lang(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_film_original_lang FOREIGN KEY (original_lang_id) REFERENCES lang(id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
---
 -- Схема таблицы Жанры-фильмы
 --
 
 DROP TABLE IF EXISTS film_genre;
 CREATE TABLE film_genre(
-	genre_id BIGINT UNSIGNED NOT NULL,
 	film_id BIGINT UNSIGNED NOT NULL,
+	genre_id BIGINT UNSIGNED NOT NULL,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	
 	CONSTRAINT fk_film_genre FOREIGN KEY (genre_id) REFERENCES genre(id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -301,10 +302,9 @@ CREATE TABLE autor_genre(
 
 DROP TABLE IF EXISTS rating;
 CREATE TABLE rating(
-	id SERIAL PRIMARY KEY,
 	user_id BIGINT UNSIGNED NOT NULL,
 	film_id BIGINT UNSIGNED NOT NULL,
-	value DECIMAL(3,2) UNSIGNED DEFAULT 0,
+	value DECIMAL(5,4) UNSIGNED DEFAULT 0,
 	created_at DATETIME DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	
@@ -320,6 +320,7 @@ DROP TABLE IF EXISTS trailer;
 CREATE TABLE trailer(
 	id SERIAL PRIMARY KEY,
 	media_id BIGINT UNSIGNED NOT NULL,
+	film_id BIGINT UNSIGNED NOT NULL,
 	title VARCHAR(255) NOT NULL COMMENT 'Название трейлера',
 	lang_id BIGINT UNSIGNED NOT NULL COMMENT 'Язык',
 	age_restrict ENUM ('0+','6+', '12+', '16+', '18+') NOT NULL COMMENT 'Возрастные ограничения',
@@ -328,6 +329,7 @@ CREATE TABLE trailer(
     
     KEY idx_title (title),
     CONSTRAINT fk_trailer_media FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_trailer_film FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_trailer_lang FOREIGN KEY (lang_id) REFERENCES lang(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -341,8 +343,8 @@ CREATE TABLE filmography(
 	film_id BIGINT UNSIGNED NOT NULL,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	
-	CONSTRAINT fk_autor_film FOREIGN KEY (autor_id) REFERENCES autor(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_film_autor FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE RESTRICT ON UPDATE CASCADE
+	CONSTRAINT fk_filmography_autor FOREIGN KEY (autor_id) REFERENCES autor(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_filmography_film FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -375,26 +377,25 @@ CREATE TABLE cinemas(
 	created_at DATETIME DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	
-	KEY idx_cinemas(name),
+	INDEX idx_cinemas(name),
 	CONSTRAINT fk_cinemas_addres FOREIGN KEY (address_id) REFERENCES address(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
--- Схема таблицы афиша
+-- Схема таблицы показы в кино
 --
 
-DROP TABLE IF EXISTS poster;
-CREATE TABLE poster(
+DROP TABLE IF EXISTS movie_screen;
+CREATE TABLE movie_screen(
+	id SERIAL PRIMARY KEY,
 	film_id BIGINT UNSIGNED NOT NULL,
-	cinemas_id BIGINT UNSIGNED NOT NULL,
+	cinemas_id BIGINT UNSIGNED NOT NULL, 
 	sessions DATETIME NOT NULL COMMENT 'Сеансы',
 	price INT NOT NULL COMMENT 'Цена билета',
-	created_at DATETIME DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	number_of_tickets INT UNSIGNED NOT NULL,
 	
-	KEY idx_film_cinemas(film_id, cinemas_id),
-	KEY idx_cinemas_sessions(cinemas_id, sessions),
-	CONSTRAINT fk_poster_film FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-	CONSTRAINT fk_poster_cinemas FOREIGN KEY (cinemas_id) REFERENCES cinemas(id) ON DELETE RESTRICT ON UPDATE CASCADE
-	
+	INDEX idx_film_cinemas(film_id, cinemas_id),
+	INDEX idx_cinemas_sessions(cinemas_id, sessions),
+	CONSTRAINT fk_movie_screen_film FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT fk_movie_screen_cinemas FOREIGN KEY (cinemas_id) REFERENCES cinemas(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
